@@ -26,7 +26,7 @@ Chaque ticket indique le comportement observé, le comportement attendu et les c
 
 - Observé : `GET /games/:id` avec un identifiant valide mais inexistant répond `500`.
 - Attendu : `404 Not Found`.
-- Critères : un identifiant mal formé répond `400 Bad Request` ; les tests de consultation d'un jeu passent.
+- Critères : un identifiant mal formé répond `400 Bad Request` ; les tests de consultation d'un jeu passent. // note(filip) Les critères mentioné sont pour le prochaine test. J'ai mit `404 Not Found` pour le test avec erreur.
 
 ## Fonctionnalités
 
