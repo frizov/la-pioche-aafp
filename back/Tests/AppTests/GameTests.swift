@@ -153,6 +153,64 @@ final class GameTests: XCTestCase {
             })
         }
     }
+    
+    func testDeleteGameReturnsNoContent() async throws {
+        try await withApp { app in
+            let game = try await createGame(app)
+            let id = try XCTUnwrap(game.id)
+            
+            try await app.test(.DELETE, "games/\(id)") { res async throws in
+                XCTAssertEqual(res.status, .noContent)
+            }
+        }
+    }
+    
+    func testDeleteGameReturnsNotFound() async throws {
+        try await withApp { app in
+            try await app.test(.DELETE, "games/\(UUID())") { res async throws in
+                XCTAssertEqual(res.status, .notFound)
+            }
+        }
+    }
+    
+    func testDeleteGameMalformedIDReturnsBadRequest() async throws {
+        try await withApp { app in
+            try await app.test(.DELETE, "games/\not-a-uuid") { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testDeleteGameCannotBeDeletedIsNotAvailable() async throws {
+        try await withApp { app in
+            let game = try await createGame(app)
+            let id = try XCTUnwrap(game.id)
+            
+            let member = try await createMember(app)
+            try await insertLoan(app, gameID: game.id!, memberID: member.id!, borrowedAt: Date(), dueAt: try Loan.dueDate(from: Date()))
+            
+            
+            try await app.test(.DELETE, "games/\(id)") { res async throws in
+                XCTAssertEqual(res.status, .conflict)
+            }
+        }
+    }
+    
+    func testDeleteGameIsCannotBeDeletedIsAvailable() async throws {
+        try await withApp { app in
+            let game = try await createGame(app)
+            let id = try XCTUnwrap(game.id)
+            
+            let member = try await createMember(app)
+            try await insertLoan(app, gameID: game.id!, memberID: member.id!, borrowedAt: Date(), dueAt: try Loan.dueDate(from: Date()), returnedAt: Date())
+ 
+            try await app.test(.DELETE, "games/\(id)") { res async throws in
+                XCTAssertEqual(res.status, .conflict)
+            }
+        }
+    }
+    
+    
 
     func testPreflightRequestFromAnotherOriginIsAllowed() async throws {
         try await withApp { app in
