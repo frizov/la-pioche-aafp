@@ -32,3 +32,13 @@ final class Game: Model, @unchecked Sendable {
         self.durationMinutes = durationMinutes
     }
 }
+
+extension Game {
+    func apply(with updateDTO: UpdateGameDTO) {
+        self.title = updateDTO.title
+        self.minPlayers = updateDTO.minPlayers
+        self.maxPlayers = updateDTO.maxPlayers
+        self.durationMinutes = updateDTO.durationMinutes
+    }
+}
+

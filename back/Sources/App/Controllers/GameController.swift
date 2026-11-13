@@ -6,6 +6,7 @@ struct GameController: RouteCollection {
         let games = routes.grouped("games")
         games.get(use: index)
         games.post(use: create)
+        games.put(":gameID", use: update)
         games.get(":gameID", use: show)
     }
 
@@ -26,6 +27,29 @@ struct GameController: RouteCollection {
         let game = dto.toModel()
         try await game.save(on: req.db)
         return try await game.toDTO().encodeResponse(status: .created, for: req)
+    }
+    
+    @Sendable
+    func update(req: Request) async throws -> GameDTO {
+        guard let gameID = req.parameters.get("gameID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid game id")
+        }
+        try UpdateGameDTO.validate(content: req)
+        let updateDto = try req.content.decode(UpdateGameDTO.self)
+        try updateDto.ensureConsistentPlayerCount()
+
+        guard let game = try await Game
+            .query(on: req.db)
+            .filter(\.$id == gameID)
+            .with(\.$loans)
+            .first()
+        else {
+            throw Abort(.notFound, reason: "Game not found")
+        }
+        
+        game.apply(with: updateDto)
+        try await game.save(on: req.db)
+        return game.toDTO()
     }
 
     @Sendable
