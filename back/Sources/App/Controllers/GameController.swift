@@ -52,7 +52,7 @@ struct GameController: RouteCollection {
     func delete(req: Request) async throws -> HTTPStatus {
         let game = try await findGame(req)
         if !game.loans.isEmpty {
-                throw Abort(.conflict, reason: "Game not found")
+                throw Abort(.conflict, reason: "A game with loans cannot be deleted")
         }
         try await game.delete(on: req.db)
         return .noContent

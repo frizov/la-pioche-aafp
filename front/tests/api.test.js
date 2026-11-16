@@ -41,11 +41,34 @@ test("createGame sends a JSON POST", async () => {
   assertEqual(created.id, "1");
 });
 
+test("updateGame sends a JSON PUT", async () => {
+  const { fetch, calls } = fakeApi({ "PUT /games/1": [200, { id: "1", title: "Catan 2" }] });
+
+  const change = { title: "Catan 2", minPlayers: 3, maxPlayers: 4, durationMinutes: 90 };
+
+  const updated = await withFakeFetch(fetch, () => api.updateGame("1", change));
+
+  assertEqual(calls[0].method, "PUT");
+  assertEqual(calls[0].path, "/games/1");
+  assertEqual(calls[0].body, change);
+  assertEqual(updated.title, "Catan 2");
+});
+
 test("borrow sends the game and the member", async () => {
   const { fetch, calls } = fakeApi({ "POST /loans": [201, { id: "l1" }] });
   await withFakeFetch(fetch, () => api.borrow("g1", "m1"));
   assertEqual(calls[0].body, { gameID: "g1", memberID: "m1" });
 });
+
+test("deleteGame sends DELETE and deletes a game", async () => {
+  const { fetch, calls} = fakeApi({ "DELETE /games/1": [204] });
+
+  const deleted = await withFakeFetch(fetch, () => api.deleteGame("1"));
+
+  assertEqual(calls[0].method, "DELETE");
+  assertEqual(calls[0].path, "/games/1");
+  assertEqual(deleted, null);
+})
 
 // --- erreurs
 

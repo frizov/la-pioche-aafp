@@ -106,6 +106,8 @@ function gameCard(game) {
   if (game.isAvailable) {
     actions.append(button("Emprunter", () => openBorrowDialog(game), "primary"));
   }
+  actions.append(button("Modifier", () => openModifyGameDialog(game)));
+  actions.append(button("Supprimer", () => deleteGame(game), "danger")); 
 
   return el(
     "li",
@@ -116,23 +118,59 @@ function gameCard(game) {
   );
 }
 
+// -- Modifier ou creer un jeux ---------------------------------------------
+
 const gameDialog = $("#game-dialog");
 const gameForm = $("#game-form");
+let modifyGame = null;
 
+// if create, this gives a clean slate
 $("#add-game").addEventListener("click", () => {
+  modifyGame = null;
   gameForm.reset();
+  $("h2", gameDialog).textContent = "Ajouter un jeu";
   showFormError(gameDialog, null);
   gameDialog.showModal();
 });
 
-bindSubmit(gameDialog, gameForm, (data) =>
-  api.createGame({
+// adds the info in the game if modify button clicked
+function openModifyGameDialog(game) {
+  modifyGame = game;
+  $("h2", gameDialog).textContent = `Modifier ${game.title}`;
+
+  gameForm.elements.title.value = game.title;
+  gameForm.elements.minPlayers.value = game.minPlayers;
+  gameForm.elements.maxPlayers.value = game.maxPlayers;
+  gameForm.elements.durationMinutes.value = game.durationMinutes;
+
+  showFormError(gameDialog, null);
+  gameDialog.showModal();
+}
+// takes the info we added, and either modifies it or creates
+bindSubmit(gameDialog, gameForm, (data) => {
+  const game = {
     title: data.get("title").trim(),
     minPlayers: Number(data.get("minPlayers")),
     maxPlayers: Number(data.get("maxPlayers")),
     durationMinutes: Number(data.get("durationMinutes")),
-  }),
-);
+  };
+  
+  return modifyGame
+    ? api.updateGame(modifyGame.id, game) : api.createGame(game);
+});
+
+// --- Supprimer un jeux ----------------------------------------------------
+async function deleteGame(game) {
+  // note: confirm returns a bool, if it is a negative, then we flip it into a true and return; thus not deleting the game
+  if (!window.confirm(`Supprimer ${game.title} ?`)) return;
+
+  // deletes and toasts
+  await run(async () => {
+    await api.deleteGame(game.id);
+    toast(`${game.title} a été supprimé.`);
+    await refresh();
+  })
+}
 
 // --- Emprunts --------------------------------------------------------------
 
