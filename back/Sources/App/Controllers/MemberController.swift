@@ -6,6 +6,8 @@ struct MemberController: RouteCollection {
         let members = routes.grouped("members")
         members.get(use: index)
         members.post(use: create)
+        members.put(":memberID", use: update)
+        members.delete(":memberID", use: delete)
         members.get(":memberID", use: show)
     }
 
@@ -40,5 +42,50 @@ struct MemberController: RouteCollection {
             throw Abort(.notFound, reason: "Member not found")
         }
         return member.toDTO()
+    }
+    
+    @Sendable
+    func update(req: Request) async throws -> MemberDTO {
+        let member = try await findMember(req)
+        
+        try UpdateMemberDTO.validate(content: req)
+        let updateDto = try req.content.decode(UpdateMemberDTO.self)
+        
+        let emailIsAvailable = try await Member.query(on: req.db)
+            .filter(\.$email == updateDto.email)
+            .filter(\.$id != member.requireID())
+            .first() == nil
+        
+        guard emailIsAvailable else {
+            throw Abort(.conflict, reason: "A member with this email already exists")
+        }
+        
+        member.apply(with: updateDto)
+        try await member.save(on: req.db)
+        return member.toDTO()
+    }
+
+    @Sendable
+    func delete(req: Request) async throws -> HTTPStatus {
+        let member = try await findMember(req)
+        if !member.loans.isEmpty {
+                throw Abort(.conflict, reason: "A member with loans cannot be deleted") // good
+        }
+        try await member.delete(on: req.db)
+        return .noContent
+    }
+    
+    private func findMember(_ req: Request) async throws -> Member {
+        guard let memberID = req.parameters.get("memberID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid member id") // good
+        }
+        guard let member = try await Member.query(on: req.db)
+            .filter(\.$id == memberID)
+            .with(\.$loans)
+            .first()
+        else {
+            throw Abort(.notFound, reason: "Member not found") // good
+        }
+        return member
     }
 }

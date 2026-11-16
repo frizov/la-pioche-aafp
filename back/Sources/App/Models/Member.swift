@@ -24,3 +24,10 @@ final class Member: Model, @unchecked Sendable {
         self.email = email
     }
 }
+
+extension Member {
+    func apply(with updateDTO: UpdateMemberDTO) {
+        self.name = updateDTO.name
+        self.email = updateDTO.email
+    }
+}
