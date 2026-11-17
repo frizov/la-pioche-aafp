@@ -7,6 +7,7 @@ struct GameDTO: Content {
     let maxPlayers: Int
     let durationMinutes: Int
     let isAvailable: Bool
+    let loans: [LoanDTO]?
 }
 
 extension Game {
@@ -17,7 +18,8 @@ extension Game {
             minPlayers: minPlayers,
             maxPlayers: maxPlayers,
             durationMinutes: durationMinutes,
-            isAvailable: isAvailable
+            isAvailable: isAvailable,
+            loans: $loans.value?.map { $0.toDTO() }
         )
     }
 }

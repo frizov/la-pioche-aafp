@@ -105,6 +105,8 @@ function gameCard(game) {
   const actions = el("div", { class: "actions" });
   if (game.isAvailable) {
     actions.append(button("Emprunter", () => openBorrowDialog(game), "primary"));
+  } else {
+    actions.append(button("Rendre", () => returnLoan(game), "primary"));
   }
   actions.append(button("Modifier", () => openModifyGameDialog(game)));
   actions.append(button("Supprimer", () => deleteGame(game), "danger")); 
@@ -193,6 +195,26 @@ async function openBorrowDialog(game) {
     showFormError(borrowDialog, null);
     borrowDialog.showModal();
   });
+}
+
+async function returnLoan(game) {
+  console.log('Parent object:', game);
+  console.log('Child:', game.loans);
+  let activeLoan = null;
+  for (let loan of game.loans) {
+    console.log("Checking loan ID:", loan.id, "returnedAt is:", loan.returnedAt, "Type:", typeof loan.returnedAt);
+
+    if (!loan.returnedAt) {
+    activeLoan = loan;
+    break;
+    }
+  }
+  console.log(activeLoan)
+  if (activeLoan) {
+    await api.returnLoan(activeLoan.id);
+  }
+  toast(`${game.title} est disponible.`);
+  await refresh();
 }
 
 bindSubmit(borrowDialog, borrowForm, async (data) => {
