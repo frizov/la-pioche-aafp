@@ -166,7 +166,6 @@ final class MemberTests: XCTestCase {
             let game = try await createGame(app)
             try await insertLoan(app, gameID: game.id!, memberID: member.id!, borrowedAt: Date(), dueAt: try Loan.dueDate(from: Date()))
             
-            
             try await app.test(.DELETE, "members/\(id)") { res async throws in
                 XCTAssertEqual(res.status, .conflict)
             }

@@ -160,6 +160,7 @@ bindSubmit(gameDialog, gameForm, (data) => {
 });
 
 // --- Supprimer un jeux ----------------------------------------------------
+
 async function deleteGame(game) {
   // note: confirm returns a bool, if it is a negative, then we flip it into a true and return; thus not deleting the game
   if (!window.confirm(`Supprimer ${game.title} ?`)) return;
@@ -171,7 +172,6 @@ async function deleteGame(game) {
     await refresh();
   })
 }
-
 // --- Emprunts --------------------------------------------------------------
 
 const borrowDialog = $("#borrow-dialog");
@@ -209,24 +209,67 @@ async function loadMembers() {
 }
 
 function memberRow(member) {
+
+  const actions = el("div", { class: "actions" });
+  actions.append(button("Modifier", () => openModifyMemberDialog(member), "primary"));
+  actions.append(button("Supprimer", () => deleteMember(member), "danger")); 
+
   return el(
     "li",
     { class: "row" },
-    el("div", { class: "row-main" }, el("p", {}, el("strong", {}, member.name)), el("p", { class: "meta" }, member.email)),
+    el("div", { class: "row-main" }, el("p", {}, el("strong", {}, member.name)), el("p", { class: "meta" }, member.email),),
+    actions,
   );
 }
+// -- Modifier ou creer une adhérente ---------------------------------------------
 
 const memberDialog = $("#member-dialog");
 const memberForm = $("#member-form");
-
+let modifyMember = null;
+// same as for games *-*-*-*-*-*
 $("#add-member").addEventListener("click", () => {
+  modifyMember = null;
   memberForm.reset();
+  $("h2", memberDialog).textContent = "Ajouter une adhérent.e"
   showFormError(memberDialog, null);
   memberDialog.showModal();
 });
 
-bindSubmit(memberDialog, memberForm, (data) =>
-  api.createMember({ name: data.get("name").trim(), email: data.get("email").trim() }),
-);
+function openModifyMemberDialog(member) {
+  modifyMember = member;
+  $("h2", memberDialog).textContent = `Modifier ${member.name}`;
+
+  memberForm.elements.name.value = member.name;
+  memberForm.elements.email.value = member.email;
+
+  showFormError(memberDialog, null);
+  memberDialog.showModal();
+}
+
+bindSubmit(memberDialog, memberForm, (data) => {
+  const member = {
+    name: data.get("name").trim(),
+    email: data.get("email").trim(),
+  };
+
+  return modifyMember 
+  ? api.updateMember(modifyMember.id, member) : api.createMember(member);
+});
+
+// --- Supprimer une adhérent.e ----------------------------------------------------
+
+async function deleteMember(member) {
+  // note: confirm returns a bool, if it is a negative, then we flip it into a true and return; thus not deleting the game
+  if (!window.confirm(`Supprimer ${member.name} ?`)) return;
+
+  // deletes and toasts
+  await run(async () => {
+    await api.deleteMember(member.id);
+    toast(`${member.name} a été supprimé.`);
+    await refresh();
+  })
+}
+
+// REFRESH --------*
 
 refresh();
