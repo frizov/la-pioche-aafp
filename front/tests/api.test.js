@@ -70,6 +70,38 @@ test("deleteGame sends DELETE and deletes a game", async () => {
   assertEqual(deleted, null);
 })
 
+test("createMember sends a JSON POST", async () => {
+  const { fetch, calls } = fakeApi({ "POST /members": [201, { id: "1" }] });
+  const member = { name: "Name", email: "email@email.fr" };
+  const created = await withFakeFetch(fetch, () => api.createMember(member));
+  assertEqual(calls[0].method, "POST");
+  assertEqual(calls[0].body, member);
+  assertEqual(created.id, "1");
+});
+
+test("updateMember sends a JSON PUT", async () => {
+  const { fetch, calls } = fakeApi({ "PUT /members/1": [200, { id: "1", name: "Name" }] });
+
+  const change = { name: "Name" };
+
+  const updated = await withFakeFetch(fetch, () => api.updateMember("1", change));
+
+  assertEqual(calls[0].method, "PUT");
+  assertEqual(calls[0].path, "/members/1");
+  assertEqual(calls[0].body, change);
+  assertEqual(updated.name, "Name");
+});
+
+test("deleteMember sends DELETE and deletes a member", async () => {
+  const { fetch, calls} = fakeApi({ "DELETE /members/1": [204] });
+
+  const deleted = await withFakeFetch(fetch, () => api.deleteMember("1"));
+
+  assertEqual(calls[0].method, "DELETE");
+  assertEqual(calls[0].path, "/members/1");
+  assertEqual(deleted, null);
+})
+
 // --- erreurs
 
 // Attend qu'une promesse échoue et renvoie l'erreur (échoue si elle réussit).

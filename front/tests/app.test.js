@@ -4,8 +4,10 @@ import { mountApp } from "./helpers.js";
 const catan = { id: "g1", title: "Catan", minPlayers: 3, maxPlayers: 4, durationMinutes: 90, isAvailable: true };
 const dixit = { id: "g2", title: "Dixit", minPlayers: 3, maxPlayers: 6, durationMinutes: 30, isAvailable: false };
 const camille = { id: "m1", name: "Camille", email: "camille@example.com" };
+const mabel = {id: "m2", name: "Mabel", email: "mabel@example.com" };
 
 const cardOf = (app, title) => app.$$("#games-list .card").find((card) => card.querySelector("h3").textContent === title);
+const memberRowOf = (app, name) => app.$$("#members-list .row").find((row) => row.querySelector("strong").textContent === name);
 
 // --- Jeux
 
@@ -190,6 +192,80 @@ test("adding a member posts the form", async () => {
   form.requestSubmit();
   await waitFor(() => app.calls.some((call) => call.method === "POST" && call.path === "/members"), "l'appel POST /members");
   assertEqual(app.calls.find((call) => call.method === "POST").body, { name: "Camille", email: "camille@example.com" });
+});
+
+test("modify a member - send and update and reload list", async () => {
+  let members = [camille];
+
+  const app = await mountApp({
+    "GET /members": () => members,
+    "PUT /members/m1": (call) => {
+      members = [{ ...members[0], ...call.body }];
+      return members[0];
+    },
+  },{ hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  const row = memberRowOf(app, "Camille");
+
+  app.click("Modifier", row);
+
+  await waitFor(() => app.$("#member-dialog").open, "");
+  const form = app.$("#member-form");
+  assertEqual(form.elements.name.value, "Camille");
+
+  form.elements.name.value = "Camille la Belle";
+  form.requestSubmit();
+
+  await waitFor(() => app.calls.some((call) => call.method === "PUT" && call.path === "/members/m1"), "");
+  assertEqual(app.calls.find((call) => call.method === "PUT").body, {
+    name: "Camille la Belle",
+    email: "camille@example.com",
+  });
+  await waitFor(() => memberRowOf(app, "Camille la Belle"), "");
+  assertTrue(!app.$("#member-dialog").open, "");
+});
+
+test("delete removes a member and shows toast", async () => {
+  let members = [camille]
+
+  const app = await mountApp({
+    "GET /members": () => members,
+    "DELETE /members/m1": () => {
+      members = [];
+      return [204];
+    },
+    },{ hash: "#members" },
+  );
+  
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.win.confirm = () => true
+  app.click("Supprimer", memberRowOf(app, "Camille"));
+
+  await waitFor(() => app.$$("#members-list .row").length === 0);
+  assertIncludes(app.$("#toasts").textContent, "Camille a été supprimé.");
+});
+
+test("delete member fails and shows an error", async () => {
+  let members = [mabel];
+
+  const app = await mountApp({
+    "GET /members": () => members,
+    "DELETE /members/m2": [
+      409,
+      { error: true, reason: "A member with loans cannot be deleted" },
+      ],
+    },{ hash: "#members" },
+  );
+  
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.win.confirm = () => true
+  app.click("Supprimer", memberRowOf(app, "Mabel"));
+
+  await waitFor(
+    () => 
+      app.$("#toasts").textContent.includes("Suppression impossible : cet·te adhérent·e a un historique d'emprunts, conservé même quand tout est rendu."));
 });
 
 test("an email already in use is shown in French", async () => {
