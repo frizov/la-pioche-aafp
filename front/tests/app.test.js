@@ -5,6 +5,9 @@ const catan = { id: "g1", title: "Catan", minPlayers: 3, maxPlayers: 4, duration
 const dixit = { id: "g2", title: "Dixit", minPlayers: 3, maxPlayers: 6, durationMinutes: 30, isAvailable: false };
 const camille = { id: "m1", name: "Camille", email: "camille@example.com" };
 const mabel = {id: "m2", name: "Mabel", email: "mabel@example.com" };
+const dixitWithLoan = { id: "g2", title: "Dixit", minPlayers: 3, maxPlayers: 6, durationMinutes: 30, isAvailable: false, 
+  loans: [{ id: "l1", gameID: "g1", memberID: "m1", borrowedAt: new Date().toISOString(), returnedAt: null}]
+};
 
 const cardOf = (app, title) => app.$$("#games-list .card").find((card) => card.querySelector("h3").textContent === title);
 const memberRowOf = (app, name) => app.$$("#members-list .row").find((row) => row.querySelector("strong").textContent === name);
@@ -166,6 +169,32 @@ test("borrowing without any member explains that one must be added first", async
   await waitFor(() => app.$("#toasts").textContent.includes("Ajoutez d'abord"), "le message d'aide");
   assertTrue(!app.$("#borrow-dialog").open, "la boîte d'emprunt ne doit pas s'ouvrir");
 });
+
+test("returns a game Returns game available", async () => {
+  const app = await mountApp({
+    "GET /games": [dixitWithLoan],
+    "POST /loans/l1/return": [
+      200,
+      { id: "l1", gameID: "g2", memberID: "m1", returnedAt: new Date().toISOString() },
+    ],
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+  app.click("Rendre", cardOf(app, "Dixit"));
+  await waitFor(() => app.calls.some((call) => call.method === "POST" && call.path === "/loans/l1/return"),"POST /loans/l1/return");
+  await waitFor(() => app.$("#toasts").textContent.includes("disponible"), "le message de confirmation");
+})
+
+test("returns a game Returns server error", async () => {
+  const app = await mountApp({
+    "GET /games": [dixitWithLoan],
+    "POST /loans/l1/return": () => { throw new TypeError("Failed to fetch");},
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+  app.click("Rendre", cardOf(app, "Dixit"));
+  await waitFor(() => app.$("#toasts").textContent.includes("Impossible de joindre le serveur. Vérifiez qu'il est bien lancé."),"error message");
+})
 
 // --- Adhérent·es
 

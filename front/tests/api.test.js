@@ -102,6 +102,18 @@ test("deleteMember sends DELETE and deletes a member", async () => {
   assertEqual(deleted, null);
 })
 
+test("return Loan returns ok and LoanDTO", async () => {
+  const loanFake = { id: "1", gameID: "g1", memberID: "m1", returnedAt: "now"}
+  const { fetch, calls } = fakeApi({ "POST /loans/1/return": [200, loanFake] });
+
+  const res = await withFakeFetch(fetch, () => api.returnLoan("1"));
+  assertEqual(calls[0].method, "POST");
+  assertEqual(calls[0].path, "/loans/1/return");
+  assertEqual(calls[0].body, undefined);
+  assertEqual(res.id, "1");
+  assertEqual(res.returnedAt != null, true);
+})
+
 // --- erreurs
 
 // Attend qu'une promesse échoue et renvoie l'erreur (échoue si elle réussit).

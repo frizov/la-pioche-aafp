@@ -198,23 +198,22 @@ async function openBorrowDialog(game) {
 }
 
 async function returnLoan(game) {
-  console.log('Parent object:', game);
-  console.log('Child:', game.loans);
   let activeLoan = null;
   for (let loan of game.loans) {
-    console.log("Checking loan ID:", loan.id, "returnedAt is:", loan.returnedAt, "Type:", typeof loan.returnedAt);
-
     if (!loan.returnedAt) {
     activeLoan = loan;
     break;
     }
   }
-  console.log(activeLoan)
+  try {
   if (activeLoan) {
     await api.returnLoan(activeLoan.id);
   }
   toast(`${game.title} est disponible.`);
   await refresh();
+  } catch(error) {
+    toast(error.message, "error");
+  }
 }
 
 bindSubmit(borrowDialog, borrowForm, async (data) => {
