@@ -256,6 +256,68 @@ test("modify a member - send and update and reload list", async () => {
   assertTrue(!app.$("#member-dialog").open, "");
 });
 
+test("show member loans shows rendu state", async () => {
+  const now = new Date().toISOString();
+  const app = await mountApp({
+    "GET /games": [dixitWithLoan],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [200, [
+      { id: "l1", gameID: "g2", memberID: "m1", borrowedAt: now, dueAt: now, returnedAt: now }
+    ]],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.click("Historique", memberRowOf(app, "Camille"));
+  await waitFor(() => app.$("#loans-dialog[open]"), "loans dialog opens");
+  assertIncludes(app.$("#loans-dialog-content").textContent, "rendu");
+});
+
+test("show member loans shows en cours state", async () => {
+  const past = "2026-01-01T10:00:00.000Z";
+  const future = "2099-01-01T10:00:00.000Z";
+  const app = await mountApp({
+    "GET /games": [dixitWithLoan],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [200, [
+      { id: "l1", gameID: "g2", memberID: "m1", borrowedAt: past, dueAt: future, returnedAt: null }
+    ]],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.click("Historique", memberRowOf(app, "Camille"));
+  await waitFor(() => app.$("#loans-dialog[open]"), "loans dialog opens");
+  assertIncludes(app.$("#loans-dialog-content").textContent, "en cours");
+});
+
+test("show member loans shows en retard state", async () => {
+  const past = "2020-01-01T10:00:00.000Z";
+  const app = await mountApp({
+    "GET /games": [dixitWithLoan],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [200, [
+      { id: "l1", gameID: "g2", memberID: "m1", borrowedAt: past, dueAt: past, returnedAt: null }
+    ]],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.click("Historique", memberRowOf(app, "Camille"));
+  await waitFor(() => app.$("#loans-dialog[open]"), "loans dialog opens");
+  assertIncludes(app.$("#loans-dialog-content").textContent, "en retard");
+});
+
+test("show member loans shows empty list message", async () => {
+  const app = await mountApp({
+    "GET /games": [dixit],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [200, []],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+  app.click("Historique", memberRowOf(app, "Camille"));
+  await waitFor(() => app.$("#loans-dialog[open]"), "loans dialog opens");
+  assertIncludes(app.$("#loans-dialog-content").textContent, "Aucun emprunt enregistré");
+});
+
 test("delete removes a member and shows toast", async () => {
   let members = [camille]
 

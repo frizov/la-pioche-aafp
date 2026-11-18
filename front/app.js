@@ -296,7 +296,6 @@ async function deleteMember(member) {
 
 // -- Montrer les emprunts ---------------------------------------------
 
-// open dialog when i click on button Historique to show loans which than calls showloans
 const loansDialog = $("#loans-dialog");
 const loansContent = $("#loans-dialog-content");
 
@@ -347,17 +346,9 @@ async function showLoans(member) {
       status: status
     };
   });
-
-  // debug 
-  /*
-  console.log("Fetching loans for member ID:", member.id);
-  console.log("games raw response:", games);
-  console.log("loans:", loans);
-  console.log("processed loans:", processedLoans);
-  */
   return processedLoans;
 }
 
-// REFRESH --------*
+// --- last REFRESH --------*
 
 refresh();
