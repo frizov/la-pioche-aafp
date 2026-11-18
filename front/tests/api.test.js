@@ -103,7 +103,7 @@ test("deleteMember sends DELETE and deletes a member", async () => {
 })
 
 test("return Loan returns ok and LoanDTO", async () => {
-  const loanFake = { id: "1", gameID: "g1", memberID: "m1", returnedAt: "now"}
+  const loanFake = { id: "1", gameID: "g1", memberID: "m1", returnedAt: "now"};
   const { fetch, calls } = fakeApi({ "POST /loans/1/return": [200, loanFake] });
 
   const res = await withFakeFetch(fetch, () => api.returnLoan("1"));
@@ -112,6 +112,30 @@ test("return Loan returns ok and LoanDTO", async () => {
   assertEqual(calls[0].body, undefined);
   assertEqual(res.id, "1");
   assertEqual(res.returnedAt != null, true);
+})
+
+test("gets member loans and returns ok and array of LoanDTO", async () => {
+  const loanArrayFake = [
+    { id: "1", gameID: "g1", memberID: "m1", returnedAt: "now"},
+    { id: "2", gameID: "g2", memberID: "m1", returnedAt: "now"},
+  ];
+
+  const { fetch, calls } = fakeApi({ "GET /members/1/loans": [200, loanArrayFake] });
+  const res = await withFakeFetch(fetch, () => api.memberLoans("1"));
+  assertEqual(calls[0].method, "GET");
+  assertEqual(calls[0].path, "/members/1/loans");
+  assertEqual(res.length , 2);
+  assertEqual(res[0].id , "1");
+})
+
+test("gets member without loans and returns ok and empty array", async () => {
+  const loanArrayFake = [];
+
+  const { fetch, calls } = fakeApi({ "GET /members/1/loans": [200, loanArrayFake] });
+  const res = await withFakeFetch(fetch, () => api.memberLoans("1"));
+  assertEqual(calls[0].method, "GET");
+  assertEqual(calls[0].path, "/members/1/loans");
+  assertEqual(res.length , 0);
 })
 
 // --- erreurs

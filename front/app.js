@@ -234,6 +234,7 @@ function memberRow(member) {
   const actions = el("div", { class: "actions" });
   actions.append(button("Modifier", () => openModifyMemberDialog(member), "primary"));
   actions.append(button("Supprimer", () => deleteMember(member), "danger")); 
+  actions.append(button("Historique", () => openLoansDialog(member),));
 
   return el(
     "li",
@@ -242,6 +243,8 @@ function memberRow(member) {
     actions,
   );
 }
+
+
 // -- Modifier ou creer une adhérente ---------------------------------------------
 
 const memberDialog = $("#member-dialog");
@@ -289,6 +292,70 @@ async function deleteMember(member) {
     toast(`${member.name} a été supprimé.`);
     await refresh();
   })
+}
+
+// -- Montrer les emprunts ---------------------------------------------
+
+// open dialog when i click on button Historique to show loans which than calls showloans
+const loansDialog = $("#loans-dialog");
+const loansContent = $("#loans-dialog-content");
+
+async function openLoansDialog(member) {
+  await run(async () => {
+    const theLoans = await showLoans(member);
+    $("h2", loansDialog).textContent = `Historique de ${member.name}`;
+
+    if (theLoans.length === 0) {
+      loansContent.replaceChildren(
+        el("div", { class: "empty-loans" }, 
+          el("p", {}, "Aucun emprunt enregistré pour ce membre.")
+        )
+      );
+    } else {
+      const loanElements = theLoans.map(loan => 
+        el("div", { class: `loan-item ${loan.status}` },
+          el("h3", {}, loan.gameTitle),
+          el("p", {}, `Emprunté le : ${formatDate(loan.borrowedAt)}`),
+          el("p", {}, `À rendre le : ${formatDate(loan.dueDate)}`),
+          el("span", { class: "section-head", style: `color: ${loan.status === "en retard" ? "#e74c3c" : loan.status === "rendu" ? "#2ecc71" : "#3498db"}; font-weight: bold;` }, `Statut : ${loan.status}`),
+        )
+      );
+      loansContent.replaceChildren(...loanElements);
+    }
+    loansDialog.showModal();
+  });
+}
+
+async function showLoans(member) {
+  const loans = await api.memberLoans(member.id);
+  const games = await api.listGames();
+
+  const processedLoans = loans.map(loan => {
+    const game = games.find(g => g.id === loan.gameID);
+
+    let status = "en cours";
+    if (loan.returnedAt) {
+      status = "rendu";
+    } else if (new Date(loan.dueAt) < new Date()) {
+      status = "en retard";
+    }
+    return {
+      id: loan.id,
+      gameTitle: game ? game.title : "Jeu inconnu",
+      borrowedAt: loan.borrowedAt,
+      dueDate: loan.dueAt,
+      status: status
+    };
+  });
+
+  // debug 
+  /*
+  console.log("Fetching loans for member ID:", member.id);
+  console.log("games raw response:", games);
+  console.log("loans:", loans);
+  console.log("processed loans:", processedLoans);
+  */
+  return processedLoans;
 }
 
 // REFRESH --------*
