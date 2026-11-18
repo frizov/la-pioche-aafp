@@ -171,4 +171,49 @@ final class MemberTests: XCTestCase {
             }
         }
     }
+    
+    func testMemberWithLoansReturnsLoans() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            let id = try XCTUnwrap(member.id)
+            let game = try await createGame(app)
+            
+            
+            try await insertLoan(app, gameID: game.id!, memberID: id, borrowedAt: Date(), dueAt: try Loan.dueDate(from: Date()))
+            try await app.test(.GET, "members/\(id)/loans") { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try !res.content.decode([LoanDTO].self).isEmpty, true)
+                let loans = try res.content.decode([LoanDTO].self)
+                XCTAssertEqual(loans[0].memberID, id)
+            }
+        }
+    }
+    
+    func testMemberWithLoansReturnsEmptyLoans() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            let id = try XCTUnwrap(member.id)
+            
+            try await app.test(.GET, "members/\(id)/loans") { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([LoanDTO].self).isEmpty, true)
+            }
+        }
+    }
+    
+    func testMemberWithLoansNotFound() async throws {
+        try await withApp { app in
+            try await app.test(.GET, "members/\(UUID())/loans") { res async throws in
+                XCTAssertEqual(res.status, .notFound)
+            }
+        }
+    }
+    
+    func testMemberWithLoansMalformedIDReturnsBadRequest() async throws {
+        try await withApp { app in
+            try await app.test(.GET, "members/\not-a-uuid/loans") { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
 }

@@ -9,6 +9,7 @@ struct MemberController: RouteCollection {
         members.put(":memberID", use: update)
         members.delete(":memberID", use: delete)
         members.get(":memberID", use: show)
+        members.get(":memberID", "loans", use: showMemberLoans)
     }
 
     @Sendable
@@ -42,6 +43,16 @@ struct MemberController: RouteCollection {
             throw Abort(.notFound, reason: "Member not found")
         }
         return member.toDTO()
+    }
+    
+    @Sendable
+    func showMemberLoans(req: Request) async throws -> [LoanDTO] {
+        let member = try await findMember(req)
+
+        let sortedLoans = member.$loans.value?.sorted { $0.borrowedAt > $1.borrowedAt } ?? []
+        let dtos = sortedLoans.map { $0.toDTO() }
+        
+        return dtos
     }
     
     @Sendable
